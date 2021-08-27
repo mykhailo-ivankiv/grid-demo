@@ -1,0 +1,13 @@
+{
+  "source":{
+    "type" : "text",
+    "value":"http://www.youtube.com/embed/wCkerYMffMo",
+    "description": "Video URL"
+  },
+
+  "title":{
+    "type" : "string",
+    "value": "BANANA!!",
+    "description": "Title"
+  }
+}

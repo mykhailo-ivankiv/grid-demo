@@ -1,0 +1,39 @@
+[
+  {
+    "name": "text",
+    "description": "some description",
+    "thumb":"images/icons/ico_txt.png",
+    "src": "js/widgets/text"
+  },
+  {
+    "name": "video",
+    "description": "some description",
+    "thumb":"images/icons/ico_video.png",
+    "src": "js/widgets/video"
+  },
+  {
+    "name":"form",
+    "description": "simple form",
+    "thumb":"images/icons/ico_form.png",
+    "src": "js/widgets/form"
+  },
+  {
+    "name":"The Unseen Column",
+    "description": "simple form",
+    "thumb":"",
+    "src": "js/widgets/table1"
+  },
+  {
+    "name":"Flip scroll",
+    "description": "simple form",
+    "thumb":"",
+    "src": "js/widgets/table2"
+  },
+  {
+    "name":"No more tables",
+    "description": "simple form",
+    "thumb":"",
+    "src": "js/widgets/table3"
+  }
+
+]
