@@ -1,4 +1,5 @@
 import EventMachine from './EventMachine.js'
+import {generateGUID} from "./utils/helpers.js";
 
 window.behaviour = function (modules, fun) {
   fun.modules = modules

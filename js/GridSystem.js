@@ -2,6 +2,7 @@ import EventMachine from './EventMachine.js'
 import WidgetContainer from './WidgetContainer.js'
 import GridSystemConfig from './GridSystemConfig.js'
 import Widget from './Widget.js'
+import { normalizeArray } from './utils/helpers.js'
 
 var GridSystem = function () {
   var COLUMN_WIDTH = 70,
