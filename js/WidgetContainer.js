@@ -1,26 +1,26 @@
-import EventMachine from "./EventMachine.js";
+import EventMachine from './EventMachine.js'
 
 var WidgetContainer = function () {
-  if (typeof WidgetContainer.instance === "object") {
-    return WidgetContainer.instance;
+  if (typeof WidgetContainer.instance === 'object') {
+    return WidgetContainer.instance
   }
 
-  EventMachine.apply(this);
-  WidgetContainer.instance = this;
+  EventMachine.apply(this)
+  WidgetContainer.instance = this
 
   /**
    * Widget container instance
    */
-  var this_ = this;
+  var this_ = this
   /**
    * Widgets hash
    */
-  this.widgets = {};
+  this.widgets = {}
 
   /**
    * Active widget
    */
-  this.activeWidget = undefined;
+  this.activeWidget = undefined
 
   /**
    * Creates new widget from specified settings and after that adds it to view
@@ -28,14 +28,14 @@ var WidgetContainer = function () {
    * @param {Object} rootConfig Settings for widget
    */
   this.createWidget = function (rootConfig, settings) {
-    var widget = new Widget(rootConfig);
+    var widget = new Widget(rootConfig)
     if (settings) {
-      widget.mergeSettings = settings;
+      widget.mergeSettings = settings
     }
 
-    this_.addWidget(widget);
-    return widget;
-  };
+    this_.addWidget(widget)
+    return widget
+  }
 
   /**
    * Adds widget to view
@@ -43,12 +43,12 @@ var WidgetContainer = function () {
    * @param {Object} widget Widget which will be added to the view
    */
   this.addWidget = function (widget) {
-    widget.activateMode("behaviour").done(function (html) {
+    widget.activateMode('behaviour').done(function (html) {
       //        this_.selectWidget(widget);
-      this_.trigger("addWidget", [widget]);
-    });
-    this_.widgets[widget.id] = widget;
-  };
+      this_.trigger('addWidget', [widget])
+    })
+    this_.widgets[widget.id] = widget
+  }
 
   /**
    * Removes widget from view
@@ -56,16 +56,16 @@ var WidgetContainer = function () {
    * @param {Object} widget Widget which will be removed from the view
    */
   this.removeWidget = function (widget) {
-    delete this_.widgets[widget.id];
+    delete this_.widgets[widget.id]
     if (this_.activeWidget === widget) {
-      this_.activeWidget = undefined;
+      this_.activeWidget = undefined
     }
     if (this_.getWidgetsCount() > 0) {
-      this_.selectWidget(getWidgetByIndex(0));
+      this_.selectWidget(getWidgetByIndex(0))
     }
 
-    this_.trigger("removeWidget", [widget]);
-  };
+    this_.trigger('removeWidget', [widget])
+  }
 
   /**
    * Selects widget
@@ -74,19 +74,19 @@ var WidgetContainer = function () {
    */
   this.selectWidget = function (widget) {
     if (this_.activeWidget && this_.activeWidget !== widget) {
-      this.unSelectWidget(this_.activeWidget);
+      this.unSelectWidget(this_.activeWidget)
     }
 
-    this_.activeWidget = widget;
-    this_.trigger("selectWidget", [widget]);
-  };
+    this_.activeWidget = widget
+    this_.trigger('selectWidget', [widget])
+  }
 
   this.unSelectWidget = function (widget) {
-    if (widget.mode === "edit") {
-      this_.saveWidget(widget);
+    if (widget.mode === 'edit') {
+      this_.saveWidget(widget)
     }
-    this_.trigger("unSelectWidget", [widget]);
-  };
+    this_.trigger('unSelectWidget', [widget])
+  }
 
   /**
    * Moves widget to Edit mode
@@ -94,14 +94,14 @@ var WidgetContainer = function () {
    * @param {Object} widget Widget which must be switched to Edit mode
    */
   this.editWidget = function (widget) {
-    if (widget.mode === "edit") {
-      return;
+    if (widget.mode === 'edit') {
+      return
     }
 
-    widget.activateMode("edit").done(function (html) {
-      this_.trigger("editWidget", [widget]); // trigger edit event
-    });
-  };
+    widget.activateMode('edit').done(function (html) {
+      this_.trigger('editWidget', [widget]) // trigger edit event
+    })
+  }
 
   /**
    * Moves widget to Behaviour mode and saves all changes
@@ -109,11 +109,11 @@ var WidgetContainer = function () {
    * @param {Object} widget Widget which must be switched to Behaviour mode
    */
   this.saveWidget = function (widget) {
-    widget.trigger("change");
-    widget.activateMode("behaviour").done(function (html) {
-      this_.trigger("saveWidget", [widget]);
-    });
-  };
+    widget.trigger('change')
+    widget.activateMode('behaviour').done(function (html) {
+      this_.trigger('saveWidget', [widget])
+    })
+  }
 
   /**
    * Changes widget type
@@ -123,15 +123,15 @@ var WidgetContainer = function () {
    */
   this.changeWidget = function (widget, rootConfig) {
     if (widget.name === rootConfig.name) {
-      return;
+      return
     }
 
-    var mergeSettings = $.extend(true, {}, widget.settings); // merge old settings with new one
+    var mergeSettings = $.extend(true, {}, widget.settings) // merge old settings with new one
     widget.changeCategory(rootConfig, mergeSettings).done(function (html) {
-      widget.trigger("change");
-      this_.trigger("changeWidget", [widget]);
-    });
-  };
+      widget.trigger('change')
+      this_.trigger('changeWidget', [widget])
+    })
+  }
 
   /**
    * Saves widget settings
@@ -140,22 +140,22 @@ var WidgetContainer = function () {
    * @param {Object} settings Settings that will be applied to widget
    */
   this.saveWidgetSettings = function (widget, settings) {
-    widget.settings = settings;
-  };
+    widget.settings = settings
+  }
 
   /**
    * Calculates widgets count
    */
   this.getWidgetsCount = function () {
     var counter = 0,
-      key;
+      key
     for (key in this_.widgets) {
       if (this_.widgets.hasOwnProperty(key)) {
-        counter += 1;
+        counter += 1
       }
     }
-    return counter;
-  };
+    return counter
+  }
 
   /**
    * Finds widget by its GUID
@@ -163,8 +163,8 @@ var WidgetContainer = function () {
    * @param {Integer} guid Unique GUID for widget
    */
   this.getWidgetById = function (guid) {
-    return this_.widgets[guid];
-  };
+    return this_.widgets[guid]
+  }
 
   /**
    * Finds widget by its position in widgets array
@@ -173,24 +173,24 @@ var WidgetContainer = function () {
    */
   function getWidgetByIndex(index) {
     var counter = 0,
-      key;
+      key
     for (key in this_.widgets) {
       if (this_.widgets.hasOwnProperty(key)) {
         if (counter === index) {
-          return this_.widgets[key];
+          return this_.widgets[key]
         }
-        counter += 1;
+        counter += 1
       }
     }
 
-    return this_.widgets[key];
+    return this_.widgets[key]
   }
 
   function init_() {}
 
-  init_();
-};
+  init_()
+}
 
-WidgetContainer.prototype = {};
+WidgetContainer.prototype = {}
 
-export default WidgetContainer;
+export default WidgetContainer
