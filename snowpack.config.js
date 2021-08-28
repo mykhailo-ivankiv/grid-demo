@@ -6,9 +6,7 @@ module.exports = {
   mount: {
     /* ... */
   },
-  plugins: [
-    /* ... */
-  ],
+  plugins: ['snowpack-plugin-less'],
   packageOptions: {
     /* ... */
   },
@@ -18,4 +16,4 @@ module.exports = {
   buildOptions: {
     /* ... */
   },
-};
+}
