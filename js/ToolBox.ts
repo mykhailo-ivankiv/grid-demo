@@ -4,7 +4,6 @@ class ToolBox {
   itemArrow = "<em class='tools-arrow'></em>"
 
   constructor(container, settings, identifier) {
-    const dfd = $.Deferred()
     const categories_ = {}
     this.$container = $(container)
 
@@ -63,8 +62,7 @@ class ToolBox {
 
     Object.values(categories_).map((category) => this.$container.append(this.draw(category)))
 
-    dfd.resolve(this.$container)
-    return dfd
+    return this.$container
   }
 }
 
