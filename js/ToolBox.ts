@@ -59,12 +59,9 @@ class ToolBox {
       $(document.body).unbind('click', closeCategory)
     }
 
-    for (var i = 0; i < settings.length; i++) {
-      this.add(settings[i])
-    }
-    for (var category in categories_) {
-      this.$container.append(this.draw(categories_[category]))
-    }
+    settings.map((_, i) => this.add(settings[i]))
+
+    Object.values(categories_).map((category) => this.$container.append(this.draw(category)))
 
     dfd.resolve(this.$container)
     return dfd

@@ -5,7 +5,7 @@ class WidgetContainer extends EventMachine {
   activeWidget = undefined
 
   addWidget = (widget) => {
-    widget.activateMode('behaviour').done(() => this.trigger('addWidget', [widget]))
+    widget.activateMode('behaviour').then(() => this.trigger('addWidget', [widget]))
     this.widgets[widget.id] = widget
   }
 
@@ -37,21 +37,12 @@ class WidgetContainer extends EventMachine {
   editWidget = (widget) => {
     if (widget.mode === 'edit') return
 
-    widget.activateMode('edit').done(() => this.trigger('editWidget', [widget]))
+    widget.activateMode('edit').then(() => this.trigger('editWidget', [widget]))
   }
 
   saveWidget = (widget) => {
     widget.trigger('change')
-    widget.activateMode('behaviour').done(() => this.trigger('saveWidget', [widget]))
-  }
-
-  changeWidget = function (widget, rootConfig) {
-    if (widget.name === rootConfig.name) return
-
-    widget.changeCategory(rootConfig, { ...widget.settings }).done(() => {
-      widget.trigger('change')
-      this.trigger('changeWidget', [widget])
-    })
+    widget.activateMode('behaviour').then(() => this.trigger('saveWidget', [widget]))
   }
 
   getWidgetsCount = () => {
