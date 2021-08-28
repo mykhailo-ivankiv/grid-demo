@@ -1,21 +1,12 @@
-/**
- * Config file for {@link EditableArea}
- * @author Mykhailo Ivankiv [neformal.lviv@gmail.com]
- */
+export default {
+  cellTemplate: "<div class='ui-widget-header'>${name}</div>",
 
-define(function () {
-  "use strict";
-  return {
+  wClassSelector: ".widget", //Widget container class
+  rClassSelector: ".row", //Row class selector
+  cClassSelector: ".cell", //Cell container class
+  wCl: "widget",
+  rCl: "row",
+  cCl: "cell",
 
-    cellTemplate : "<div class='ui-widget-header'>${name}</div>",
-//    themeDescriptor:
-    wClassSelector    : ".widget", //Widget container class
-    rClassSelector : ".row",    //Row class selector
-    cClassSelector : ".cell",   //Cell container class
-    wCl : "widget",
-    rCl : "row",
-    cCl : "cell",
-
-    wMinWidth: 2 //Number of column
-  };
-});
+  wMinWidth: 2, //Number of column
+};

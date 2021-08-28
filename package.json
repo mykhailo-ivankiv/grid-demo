@@ -1,0 +1,26 @@
+{
+  "name": "grid-demo",
+  "version": "1.0.0",
+  "description": "![alt text](demo.gif \"Demo\")",
+  "main": "index.js",
+  "scripts": {
+    "start": "snowpack dev",
+    "build": "snowpack build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neformal13/grid-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/neformal13/grid-demo/issues"
+  },
+  "homepage": "https://github.com/neformal13/grid-demo#readme",
+  "devDependencies": {
+    "prettier": "^2.3.2",
+    "snowpack": "^3.8.8"
+  }
+}
