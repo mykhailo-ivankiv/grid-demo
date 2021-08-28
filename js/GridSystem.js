@@ -40,12 +40,18 @@ class GridSystem extends EventMachine {
     return null
   }
 
-  insertWidget(widget, widgetHolder) {
-    widgetHolder.html(widget.html)
-  }
-
   getWidgetHolder = ({ id }) => $(`[widgetid='${id}']`)
   getWidgetCell = (widget) => this.getWidgetHolder(widget).parent()
+
+  getLayout = () =>
+    this.$container
+      .clone()
+      .find(this.wClassSelector)
+      .each(function () {
+        $(this).removeClass('active').html('')
+      })
+      .end()
+      .html()
 
   constructor() {
     super()
@@ -79,9 +85,9 @@ class GridSystem extends EventMachine {
       })
     }
 
-    const getWidget = (x, y) => this.getElementByPos(x, y, this_.wClassSelector)
-    const getCell = (x, y) => this.getElementByPos(x, y, this_.cClassSelector)
-    const getRow = (x, y) => this.getElementByPos(x, y, this_.rClassSelector)
+    const getWidget = (x, y) => this.getElementByPos(x, y, this.wClassSelector)
+    const getCell = (x, y) => this.getElementByPos(x, y, this.cClassSelector)
+    const getRow = (x, y) => this.getElementByPos(x, y, this.rClassSelector)
 
     const getSeparators = (cells, settings) => {
       var separators = [],
@@ -198,60 +204,61 @@ class GridSystem extends EventMachine {
     }
 
     const getHelperHTML = (extendObj) => {
-      var helper = $("<div class='helper'></div>"),
-        el = $(extendObj.element),
-        left,
-        width,
-        height,
-        top,
-        row,
-        bottom
+      const { direction, element, row } = extendObj
+      let helper = $("<div class='helper'></div>")
+      let el$ = $(element)
 
-      if (extendObj.direction === 'left') {
-        if (extendObj.element) {
-          left = el.offset().left - extendObj.row.offset().left
-        } else {
-          left = extendObj.row.width()
-        }
-        height = '100%'
-      } else if (extendObj.direction === 'center') {
-        width = (el.width() * 80) / 100
-        height = (el.height() * 50) / 100
-        left = el.offset().left - extend.row.offset().left + (el.width() * 10) / 100
-        top = el.offset().top - extend.row.offset().top + (el.height() * 25) / 100
-      } else if (extendObj.direction === 'top') {
-        if (extend.element) {
-          top = el.offset().top - $(extendObj.row).offset().top
-          width = el.width()
-          left = el.offset().left - $(extendObj.row).offset().left
-        } else if (extendObj.cell) {
-          el = $(extendObj.cell).find(this_.wClassSelector).last()
-          top = el.offset().top - $(extendObj.cell).parent().offset().top + el.height()
-          width = el.width()
-          left = el.offset().left - $(extendObj.cell).parent().offset().left
-        } else if (extend.row) {
-          bottom = 0
-        } else {
-          row = this_.$container.find('.row').last()
-          top = row[0] ? row.offset().top + row.height() : 0
-        }
-        width = width || '100%'
+      if (direction === 'left') {
+        return helper.css({
+          left: element ? el$.offset().left - row.offset().left : row.width(),
+          height: '100%',
+        })
       }
 
-      helper.css({
-        width: width,
-        top: top,
-        bottom: bottom,
-        left: left,
-        height: height,
-      })
+      if (direction === 'center') {
+        return helper.css({
+          width: (el$.width() * 80) / 100,
+          top: el$.offset().top - row.offset().top + (el$.height() * 25) / 100,
+          left: el$.offset().left - row.offset().left + (el$.width() * 10) / 100,
+          height: (el$.height() * 50) / 100,
+        })
+      }
+
+      if (direction === 'top') {
+        if (element) {
+          return helper.css({
+            width: el$.width() || '100%',
+            top: el$.offset().top - $(extendObj.row).offset().top,
+            left: el$.offset().left - $(extendObj.row).offset().left,
+          })
+        }
+
+        if (extendObj.cell) {
+          el$ = $(extendObj.cell).find(this_.wClassSelector).last()
+
+          return helper.css({
+            width: el$.width() || '100%',
+            top: el$.offset().top - $(extendObj.cell).parent().offset().top + el$.height(),
+            left: el$.offset().left - $(extendObj.cell).parent().offset().left,
+          })
+        }
+
+        if (extend.row) {
+          return helper.css({ width: '100%', bottom: 0 })
+        }
+
+        let row = this_.$container.find('.row').last()
+
+        return helper.css({ width: '100%', top: row[0] ? row.offset().top + row.height() : 0 })
+      }
+
       return helper
     }
 
     const getLayoutArray = (row, from, to) => {
       var layout = [],
         i,
-        cells = row.find(this_.cClassSelector)
+        cells = row.find(this.cClassSelector)
 
       for (i = from || 0; i < (to || cells.length); i += 1) {
         cells[i].className.replace(SELECT_GRID, function () {
@@ -329,72 +336,58 @@ class GridSystem extends EventMachine {
       highlightEl_.css({ display: 'none' })
     }
 
-    const getWidgetRow = (widget) => this_.getWidgetCell(widget).parent()
-
     //Resize functions;
-    function resize(startEvent, side) {
-      var layoutBefore = this_.getLayout(),
-        layoutArrayBefore = getLayoutArray(this_.resizableCell.parent()),
-        prevWidth,
-        startColumn
+    const resize = (startEvent, side) => {
+      let layoutBefore = this.getLayout()
+      let prevWidth = 0
+      let startColumn
 
-      function resizeAction(currentEvent) {
-        var deltaColumn = Math.round((currentEvent.clientX - startEvent.clientX) / COLUMN_WIDTH),
-          widgets,
-          layout,
-          from,
-          currentCellWidth,
-          to
+      const resizeAction = (currentEvent) => {
+        let deltaColumn =
+          side === 'left'
+            ? Math.round((currentEvent.clientX - startEvent.clientX) / COLUMN_WIDTH)
+            : -Math.round((currentEvent.clientX - startEvent.clientX) / COLUMN_WIDTH)
 
-        if (prevWidth !== deltaColumn) {
-          widgets = this_.resizableCell.parent().find(this_.cClassSelector)
+        if (prevWidth === Math.abs(deltaColumn)) return
 
-          // Scope definition.
-          if (side === 'left') {
-            //left
-            from = 0
-            to = this_.resizableCell.index()
-          } else if (side === 'right') {
-            deltaColumn *= -1 // Reverse width change;
-            from = this_.resizableCell.index() + 1
-            to = widgets.length
-          }
+        let from = side === 'left' ? 0 : this.resizableCell.index() + 1
+        let to =
+          side === 'left' ? this.resizableCell.index() : this.resizableCell.parent().find(this.cClassSelector).length
 
-          currentCellWidth = startColumn - deltaColumn
-          if (currentCellWidth >= this_.wMinWidth) {
-            layout = getLayoutArray(this_.resizableCell.parent(), from, to)
-            layout = normalizeArray(layout, layout.sum() - (prevWidth - deltaColumn), this_.wMinWidth)
+        let currentCellWidth = startColumn - deltaColumn
+        if (currentCellWidth >= this.wMinWidth) {
+          let layout
 
-            if (layout) {
-              this_.resizableCell[0].className = this_.resizableCell[0].className.replace(
-                SELECT_GRID,
-                ' grid_' + currentCellWidth + ' ',
-              )
-              setLayout(this_.resizableCell.parent(), layout, from)
-              prevWidth = deltaColumn
-            }
+          layout = getLayoutArray(this.resizableCell.parent(), from, to)
+          layout = normalizeArray(layout, layout.sum() - (prevWidth - deltaColumn), this.wMinWidth)
+
+          if (layout) {
+            this.resizableCell[0].className = this.resizableCell[0].className.replace(
+              SELECT_GRID,
+              ' grid_' + currentCellWidth + ' ',
+            )
+            setLayout(this.resizableCell.parent(), layout, from)
+            prevWidth = deltaColumn
           }
         }
       }
 
-      function stopResizeAction() {
+      const stopResizeAction = () => {
         $(document.body).unbind('mousemove', resizeAction)
         $(document.body).unbind('mouseup', stopResizeAction)
-        this_.$container.removeClass('resize')
+        this.$container.removeClass('resize')
 
-        if (this_.getLayout() !== layoutBefore) {
-          this_.trigger('layoutChange')
+        if (this.getLayout() !== layoutBefore) {
+          this.trigger('layoutChange')
         }
       }
 
-      prevWidth = 0
-
-      SELECT_GRID.test(this_.resizableCell[0].className)
+      SELECT_GRID.test(this.resizableCell[0].className)
       startColumn = RegExp.$1
 
       $(document.body).bind('mousemove', resizeAction)
       $(document.body).bind('mouseup', stopResizeAction)
-      this_.$container.addClass('resize')
+      this.$container.addClass('resize')
     }
 
     this.resizableCell = null
@@ -404,7 +397,8 @@ class GridSystem extends EventMachine {
 
     this.setResizable = function (wCell) {
       this.resizableCell = wCell
-      var cellWidth = wCell.parent().find(this_.cClassSelector).length
+
+      let cellWidth = wCell.parent().find(this_.cClassSelector).length
       if (wCell.index() !== 0) {
         this.resizableCell.append(resizeLeft)
       }
@@ -419,9 +413,9 @@ class GridSystem extends EventMachine {
     }
 
     this.relocateWidget = function (widget, newCell) {
-      var oldCell = this_.getWidgetCell(widget),
-        layout,
-        oldRow = getWidgetRow(widget)
+      let oldCell = this_.getWidgetCell(widget)
+      let layout
+      let oldRow = this.getWidgetCell(widget).parent()
 
       widgetContainer.unSelectWidget(widget)
 
@@ -443,30 +437,29 @@ class GridSystem extends EventMachine {
       this_.trigger('layoutChange')
     }
 
-    this.removeWidget = function (widget) {
-      var row = getWidgetRow(widget),
-        cell = this_.getWidgetCell(widget),
-        layout
+    this.removeWidget = (widget) => {
+      let row = this.getWidgetCell(widget).parent()
+      let cell = this.getWidgetCell(widget)
+
       widgetContainer.unSelectWidget(widget)
-      this_.getWidgetHolder(widget).remove()
+      this.getWidgetHolder(widget).remove()
 
       if (!cell[0].childNodes.length) {
         cell.remove()
       }
 
       if (row[0].childNodes.length) {
-        layout = getLayoutArray(row).normalize(12)
-        setLayout(row, layout)
+        setLayout(row, getLayoutArray(row).normalize(12))
       } else {
         row.remove()
       }
 
-      this_.trigger('layoutChange')
+      this.trigger('layoutChange')
     }
 
     this.addWidget = (widgetRootConfig, cell) => {
-      var newWidget = new Widget(widgetRootConfig),
-        widgetHolder = $('<div></div>').addClass(this_.wCl).attr('widgetID', newWidget.id)
+      let newWidget = new Widget(widgetRootConfig)
+      let widgetHolder = $('<div></div>').addClass(this_.wCl).attr('widgetID', newWidget.id)
 
       if (extend.cell && extend.element) {
         widgetHolder.insertBefore(extend.element)
@@ -478,17 +471,6 @@ class GridSystem extends EventMachine {
       widgetContainer.selectWidget(newWidget)
 
       this_.trigger('layoutChange')
-    }
-
-    this.getLayout = () => {
-      var layout = this_.$container
-        .clone()
-        .find(this_.wClassSelector)
-        .each(function () {
-          $(this).removeClass('active').html('')
-        })
-        .end()
-      return layout.html()
     }
 
     function init_() {
@@ -525,19 +507,17 @@ class GridSystem extends EventMachine {
         this_.setResizable(widgetCell)
       })
 
-      widgetContainer.bind('unSelectWidget', function (widget) {
+      widgetContainer.bind('unSelectWidget', (widget) => {
         var widgetCell = this_.getWidgetCell(widget)
         this_.unSetResizable(widgetCell)
       })
 
-      $(window).bind('keypress', function (e) {
-        if ((e.keyCode === 46 || e.keyCode === 8) && widgetContainer.activeWidget.mode !== 'edit') {
-          //Delete (or Backspace)
+      document.addEventListener('keydown', (event) => {
+        if ((event.key === 'Backspace' || event.key === 'Delete') && widgetContainer.activeWidget.mode !== 'edit') {
           widgetContainer.removeWidget(widgetContainer.activeWidget)
-          e.preventDefault()
+          event.preventDefault()
         }
-        if (e.keyCode === 13 && widgetContainer.activeWidget.mode !== 'edit') {
-          //Enter
+        if (event.key === 'Enter' && widgetContainer.activeWidget.mode !== 'edit') {
           widgetContainer.editWidget(widgetContainer.activeWidget)
         }
       })
