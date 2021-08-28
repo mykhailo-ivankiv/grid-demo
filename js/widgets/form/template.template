@@ -1,0 +1,35 @@
+<div class="block">
+  <h4>${header.value}</h4>
+
+  <form action="#">
+    {{each(i, field) fields.fields}}
+
+
+    <fieldset>
+      <label>${field.label}</label>
+      {{if field.type == "string"}}
+      <input type="text" value="${field.default}" placeholder="${field.placeholder}" {{if field.require}} required
+      {{/if}} />
+      {{/if}}
+      {{if field.type == "text"}}
+      <textarea rows="${field.rows}" cols="${field.cols}" value="${field.default}" placeholder="${field.placeholder}"
+      {{if field.require}} required {{/if}} />
+      {{/if}}
+      {{if field.type == "select"}}
+      <select>
+        {{each(i, option) field.options}}
+        <option name="${option.name}" value="${option.value}">${option.label}</option>
+        {{/each}}
+      </select>
+      {{/if}}
+      {{if field.type == "checkbox"}}
+      <input type="checkbox" value="${field.default}" {{if field.checked}} checked {{/if}} {{if field.require}} required
+      {{/if}} />
+      {{/if}}
+    </fieldset>
+    {{/each}}
+    <fieldset class="submit">
+      <button type="submit">${submit.value}</button>
+    </fieldset>
+  </form>
+</div>

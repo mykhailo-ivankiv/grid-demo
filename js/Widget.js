@@ -13,7 +13,7 @@ window.editMode = (modules, fn) => {
 
 class Widget extends EventMachine {
   modeSrc = { edit: '/js/editMode.js', behaviour: '/js/behaviour.js' }
-  modeTemplate = { edit: '/editTemplate.html', behaviour: '/template.html' }
+  modeTemplate = { edit: '/editTemplate.template', behaviour: '/template.template' }
   settingsSrc = '/settings.json'
 
   constructor(rootConfig, id) {
