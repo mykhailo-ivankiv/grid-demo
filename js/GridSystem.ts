@@ -1,7 +1,9 @@
-import EventMachine from './EventMachine.js'
-import WidgetContainer from './WidgetContainer.js'
-import Widget from './Widget.js'
-import { normalizeArray } from './utils/helpers.js'
+import EventMachine from './EventMachine'
+import WidgetContainer from './WidgetContainer'
+import Widget from './Widget'
+import { normalizeArray } from './utils/helpers'
+
+const widgetContainer = new WidgetContainer()
 
 class GridSystem extends EventMachine {
   cellTemplate = "<div class='ui-widget-header'>${name}</div>"
@@ -14,6 +16,7 @@ class GridSystem extends EventMachine {
   cCl = 'cell'
 
   wMinWidth = 2 //Number of column
+  $container
 
   getElementByPos(x, y, selector) {
     var elements = this.$container.find(selector),
@@ -62,7 +65,6 @@ class GridSystem extends EventMachine {
       extend = null,
       resizeLeft,
       resizeRight,
-      widgetContainer = new WidgetContainer(), // Singleton. When you will try to create new instance you'll get this object. (TODO: Need to refactor {Khrystya})
       highlightEl_
 
     const highlightObj = (e) => {

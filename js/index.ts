@@ -1,6 +1,6 @@
-import WidgetContainer from './WidgetContainer.js'
-import GridSystem from './GridSystem.js'
-import ToolBox from './ToolBox.js'
+import WidgetContainer from './WidgetContainer'
+import GridSystem from './GridSystem'
+import ToolBox from './ToolBox'
 
 const widgetContainer = new WidgetContainer()
 const gridSystem = new GridSystem()

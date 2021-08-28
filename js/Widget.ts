@@ -1,5 +1,5 @@
-import EventMachine from './EventMachine.js'
-import { generateGUID } from './utils/helpers.js'
+import EventMachine from './EventMachine'
+import { generateGUID } from './utils/helpers'
 
 window.behaviour = (modules, fn) => {
   fn.modules = modules
