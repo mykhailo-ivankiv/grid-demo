@@ -1,14 +1,14 @@
 import EventMachine from './EventMachine.js'
-import {generateGUID} from "./utils/helpers.js";
+import { generateGUID } from './utils/helpers.js'
 
-window.behaviour = function (modules, fun) {
-  fun.modules = modules
-  window.behaviourData = fun
+window.behaviour = (modules, fn) => {
+  fn.modules = modules
+  window.behaviourData = fn
 }
 
-window.editMode = function (modules, fun) {
-  fun.modules = modules
-  window.behaviourData = fun
+window.editMode = (modules, fn) => {
+  fn.modules = modules
+  window.behaviourData = fn
 }
 
 var Widget = function (rootConfig, id) {
@@ -60,12 +60,16 @@ var Widget = function (rootConfig, id) {
     if (urlData_[url]) {
       dfd.resolve(urlData_[url])
     } else {
-      $.ajax(url, { dataType: type })
-        .success(function (data) {
+      fetch(url)
+        .then((response) => {
+          if (type === 'json') return response.json()
+          return response.text()
+        })
+        .then((data) => {
           urlData_[url] = data
           dfd.resolve(data)
         })
-        .error(function () {
+        .catch(() => {
           console.log(arguments)
           dfd.reject(arguments)
         })
@@ -203,9 +207,10 @@ var Widget = function (rootConfig, id) {
    *
    * @param {String} mode Mode name
    */
-  var getModeScript_ = function (mode) {
+  const getModeScript_ = (mode) => {
     var dfd = $.Deferred()
     var behaviour = function () {}
+
     $.ajax(this_.src + this_.modeSrc[mode], { dataType: 'script', cache: true })
       .success(function () {
         behaviour = window.behaviourData

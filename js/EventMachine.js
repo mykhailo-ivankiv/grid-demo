@@ -5,7 +5,7 @@ const EventMachine = function () {
   this.bind = function (ev, fn) {
     ev = ev.toLocaleLowerCase()
     ev = ev.indexOf('on') !== 0 ? 'on' + ev : ev
-    events[ev] ? events[ev].push(fn) : (events[ev] = []).push(fn)
+    events[ev] ? events[ev].push(fn) : (events[ev] = [fn])
     return this
   }
 
