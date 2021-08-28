@@ -1,9 +1,10 @@
 import EventMachine from './EventMachine'
 import { generateGUID } from './utils/helpers'
 
+const widgetPath = './widgets'
+
 class Widget extends EventMachine {
-  modeSrc = { edit: '/js/editMode.js', behaviour: '/js/behaviour.js' }
-  modeTemplate = { edit: '/editTemplate.template', behaviour: '/template.template' }
+  modeTemplate = { edit: '/editTemplate.js', behaviour: '/template.js' }
   settingsSrc = '/settings.json'
 
   /**
@@ -34,16 +35,14 @@ class Widget extends EventMachine {
    */
   activateMode = (mode) => {
     this.trigger('beforeModeChanged', [this.mode, mode])
-    return Promise.all([
-      this.fetchResource(this.src + this.modeTemplate[mode], 'text'),
-      this.fetchResource(`${this.src}${this.settingsSrc}`, 'json').then((settings) => {
+    return this.src()
+      .then(({ template, settings }) => {
         if (!this.settings) {
           this.settings = settings
         }
-        return this.settings
-      }),
-    ])
-      .then(([template, settings]) => $.tmpl(template, settings))
+
+        return template(settings)
+      })
       .then((html) => {
         this.html = html
 

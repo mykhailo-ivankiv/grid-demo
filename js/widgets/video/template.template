@@ -1,4 +1,0 @@
-<div class="block">
-  <h4>${title.value}</h4>
-  <iframe width="100%" height="350" src="${source.value}" frameborder="0" allowfullscreen></iframe>
-</div>

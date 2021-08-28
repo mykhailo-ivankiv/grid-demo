@@ -1,2 +1,0 @@
-<div class="text-widget" contenteditable="true"> {{html content.value}} </div>
-

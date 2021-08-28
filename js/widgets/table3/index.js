@@ -1,4 +1,4 @@
-<div class="table-widget-3">
+export const template = () => `<div class="table-widget-3">
   <table class="table-bordered table-striped table-condensed cf">
     <thead class="cf">
     <tr>
@@ -137,4 +137,5 @@
     </tr>
     </tbody>
   </table>
-</div>
+</div>`
+export const settings = {}

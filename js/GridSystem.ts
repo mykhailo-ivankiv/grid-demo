@@ -6,7 +6,7 @@ import { normalizeArray } from './utils/helpers'
 const widgetContainer = new WidgetContainer()
 
 class GridSystem extends EventMachine {
-  cellTemplate = "<div class='ui-widget-header'>${name}</div>"
+  cellTemplate = ({ name }) => `<div class='ui-widget-header'>${name}</div>`
 
   wClassSelector = '.widget' //Widget container class
   rClassSelector = '.row' //Row class selector

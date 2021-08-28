@@ -18,7 +18,7 @@ widgetContainer
       .data('widget', widget)
       .draggable({
         cursorAt: { top: -35, left: -35 },
-        helper: () => $.tmpl(gridSystem.cellTemplate, widget.name),
+        helper: () => $(gridSystem.cellTemplate({ name: widget.name })),
       })
   })
   .bind('saveWidget', (widget) => gridSystem.getWidgetHolder(widget).html(widget.html))
@@ -27,9 +27,18 @@ widgetContainer
   .bind('unselectWidget', (widget) => gridSystem.getWidgetHolder(widget).removeClass('active'))
 
 try {
-  //Init widgets list
-  const data = await (await fetch('data/widgets.json')).json()
-  new ToolBox($('#widgets'), data, 'widgetRootConfig')
+  new ToolBox(
+    document.querySelector(`#widgets`),
+    [
+      { name: 'text', thumb: 'images/icons/ico_txt.png', src: () => import('./widgets/text/index.js') },
+      { name: 'video', thumb: 'images/icons/ico_video.png', src: () => import('./widgets/video/index.js') },
+      { name: 'form', thumb: 'images/icons/ico_form.png', src: () => import('./widgets/form/index.js') },
+      { name: 'The Unseen Column', thumb: '', src: () => import('./widgets/table1/index.js') },
+      { name: 'Flip scroll', thumb: '', src: () => import('./widgets/table2/index.js') },
+      { name: 'No more tables', thumb: '', src: () => import('./widgets/table3/index.js') },
+    ],
+    'widgetRootConfig',
+  )
 } catch (e) {
   console.error('Cannot load source for widgets settings', e)
 }
