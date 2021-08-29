@@ -18,7 +18,7 @@ class WidgetContainer extends EventMachine {
       this.selectWidget(Object.keys(this.widgets)[0])
     }
 
-    this.trigger('removeWidget', [widget])
+    // this.trigger('removeWidget', [widget])
   }
 
   selectWidget = (widget) => {

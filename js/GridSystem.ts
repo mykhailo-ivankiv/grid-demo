@@ -45,67 +45,62 @@ class GridSystem {
     let $resizeRight
     let $highlightEl
 
-    const highlightObj = (e) => {
-      if (e.ctrlKey || e.metaKey) {
+    const highlightObj = ({ pageX, pageY, ctrlKey, metaKey }) => {
+      if (ctrlKey || metaKey) {
         document.body.classList.add('extend-cell')
       } else {
         document.body.classList.remove('extend-cell')
       }
 
-      extend =
-        e.ctrlKey || e.metaKey ? getWidgetRelatedPosition(e.pageX, e.pageY) : getRelatedPosition(e.pageX, e.pageY)
+      extend = ctrlKey || metaKey ? getWidgetRelatedPosition(pageX, pageY) : getRelatedPosition(pageX, pageY)
 
       const { height, width, left, top } = (extend.row?.[0] || this.$container[0]).getBoundingClientRect()
 
-      $highlightEl.html(getHelperHTML(extend)).css({ height, width, left, top })
+      $highlightEl.css({ height, width, left, top }).html(getHelperHTML(extend))
     }
-    const getHelperHTML = (extendObj) => {
-      const { direction, element, row } = extendObj
+
+    const getHelperHTML = ({ direction, element, row, cell }) => {
       let helper = $("<div class='helper'></div>")
       let el$ = $(element)
 
-      if (direction === 'left') {
+      if (direction === 'left')
         return helper.css({
           left: element ? el$.offset().left - row.offset().left : row.width(),
           height: '100%',
         })
-      }
 
-      if (direction === 'center') {
+      if (direction === 'center')
         return helper.css({
           width: (el$.width() * 80) / 100,
           top: el$.offset().top - row.offset().top + (el$.height() * 25) / 100,
           left: el$.offset().left - row.offset().left + (el$.width() * 10) / 100,
           height: (el$.height() * 50) / 100,
         })
-      }
 
       if (direction === 'top') {
         if (element) {
           return helper.css({
             width: el$.width() || '100%',
-            top: el$.offset().top - $(extendObj.row).offset().top,
-            left: el$.offset().left - $(extendObj.row).offset().left,
+            top: el$.offset().top - $(row).offset().top,
+            left: el$.offset().left - $(row).offset().left,
           })
         }
 
-        if (extendObj.cell) {
-          el$ = $(extendObj.cell).find(this.wClassSelector).last()
+        if (cell) {
+          el$ = $(cell).find(this.wClassSelector).last()
 
           return helper.css({
             width: el$.width() || '100%',
-            top: el$.offset().top - $(extendObj.cell).parent().offset().top + el$.height(),
-            left: el$.offset().left - $(extendObj.cell).parent().offset().left,
+            top: el$.offset().top - $(cell).parent().offset().top + el$.height(),
+            left: el$.offset().left - $(cell).parent().offset().left,
           })
         }
 
-        if (extend.row) {
-          return helper.css({ width: '100%', bottom: 0 })
-        }
+        if (row) helper.css({ width: '100%', bottom: 0 })
 
-        let row = this.$container.find('.row').last()
+        let lastRow = this.$container.find('.row').last()
 
-        return helper.css({ width: '100%', top: row[0] ? row.offset().top + row.height() : 0 })
+        return helper.css({ width: '100%', top: lastRow[0] ? lastRow.offset().top + lastRow.height() : 0 })
       }
 
       return helper
@@ -189,39 +184,37 @@ class GridSystem {
         layout,
       )
 
-    const getExtendedCell = (extend) => {
+    const getExtendedCell = (___extend____) => {
       let cell = $('<div></div>').addClass(this.cCl)
-      let row = $("<div class='row container_12'></div>")
-      let cells
-      let cellWidth
-      let layout
 
-      if (extend.direction === 'left') {
-        cells = extend.row.find(this.cClassSelector)
-        cellWidth = Math.ceil(12 / (cells.length + 1))
+      if (___extend____.direction === 'left') {
+        let cells = ___extend____.row.find(this.cClassSelector)
+        let cellWidth = Math.ceil(12 / (cells.length + 1))
 
-        layout = getLayoutArray(extend.row[0])
+        let layout = getLayoutArray(___extend____.row[0])
         layout.normalize(12 - cellWidth)
-        setLayout(extend.row[0], layout)
+        setLayout(___extend____.row[0], layout)
 
         cell.addClass('grid_' + cellWidth)
 
-        if (extend.element) {
-          cell.insertBefore(extend.element)
+        if (___extend____.element) {
+          cell.insertBefore(___extend____.element)
         } else {
           cell.insertAfter(cells.last())
         } // insert in the end of row
-      } else if (extend.direction === 'top') {
-        if (extend.cell) {
-          return extend.cell
+      } else if (___extend____.direction === 'top') {
+        if (___extend____.cell) {
+          return ___extend____.cell
         } else {
+          let row = $("<div class='row container_12'></div>")
+
           cell.addClass('grid_12')
           cell.appendTo(row)
 
-          if (extend.row && extend.element) {
-            row.insertBefore(extend.row) // Insert before row
-          } else if (extend.row) {
-            row.insertAfter(extend.row) // Insert after row
+          if (___extend____.row && ___extend____.element) {
+            row.insertBefore(___extend____.row) // Insert before row
+          } else if (___extend____.row) {
+            row.insertAfter(___extend____.row) // Insert after row
           } else {
             row.appendTo(this.container) // If still no any row elements
           }
@@ -381,7 +374,7 @@ class GridSystem {
     $highlightEl = $("<div class='extend-element container_12'></div>")
       .appendTo(document.body)
       .bind('mousemove', highlightObj)
-      .droppable({ drop: dropElement_ })
+
 
     // Init main containers
     this.container = document.querySelector('#mainCanvas')
