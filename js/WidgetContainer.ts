@@ -29,20 +29,7 @@ class WidgetContainer extends EventMachine {
   }
 
   unSelectWidget = (widget) => {
-    if (widget.mode === 'edit') this.saveWidget(widget)
-
     this.trigger('unSelectWidget', [widget])
-  }
-
-  editWidget = (widget) => {
-    if (widget.mode === 'edit') return
-
-    widget.activateMode('edit').then(() => this.trigger('editWidget', [widget]))
-  }
-
-  saveWidget = (widget) => {
-    widget.trigger('change')
-    widget.activateMode('behaviour').then(() => this.trigger('saveWidget', [widget]))
   }
 
   getWidgetsCount = () => {

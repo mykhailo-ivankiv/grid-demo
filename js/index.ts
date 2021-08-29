@@ -23,8 +23,6 @@ widgetContainer
         helper: () => $(gridSystem.cellTemplate({ name: widget.name })),
       })
   })
-  .bind('saveWidget', (widget) => gridSystem.getWidgetHolder(widget).html(widget.html))
-  .bind('editWidget', (widget) => gridSystem.getWidgetHolder(widget).html(widget.html))
   .bind('selectWidget', (widget) => gridSystem.getWidgetHolder(widget).addClass('active'))
   .bind('unselectWidget', (widget) => gridSystem.getWidgetHolder(widget).removeClass('active'))
 

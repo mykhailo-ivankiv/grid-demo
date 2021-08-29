@@ -1,4 +1,3 @@
-import EventMachine from './EventMachine'
 import WidgetContainer from './WidgetContainer'
 import Widget from './Widget'
 import { decreaseArrayByValueFromLeft, decreaseArrayByValueFromRight, normalizeArray } from './utils/helpers'
@@ -7,7 +6,9 @@ import { splitAt, concat, sum, zipWith, pipe, slice, update, last, head } from '
 
 const widgetContainer = new WidgetContainer()
 
-class GridSystem extends EventMachine {
+const COLUMN_WIDTH = 70
+
+class GridSystem {
   cellTemplate = ({ name }) => `<div class='ui-widget-header'>${name}</div>`
 
   wClassSelector = '.widget' //Widget container class
@@ -38,110 +39,26 @@ class GridSystem extends EventMachine {
   getWidgetCell = (widget) => this.getWidgetHolder(widget).parent()
 
   constructor() {
-    super()
-
-    var COLUMN_WIDTH = 70,
-      SELECT_GRID = /\s*grid_(\d{1,2})\s*/gim,
-      this_ = this,
-      extend = null,
-      resizeLeft,
-      resizeRight,
-      highlightEl_
+    let this_ = this
+    let extend = null
+    let $resizeLeft
+    let $resizeRight
+    let $highlightEl
 
     const highlightObj = (e) => {
       if (e.ctrlKey || e.metaKey) {
-        //TODO: bind to window keydown
-        extend = getWidgetRelatedPosition(e.pageX, e.pageY)
-        $(document.body).addClass('extend-cell')
+        document.body.classList.add('extend-cell')
       } else {
-        $(document.body).removeClass('extend-cell')
-        extend = getRelatedPosition(e.pageX, e.pageY)
+        document.body.classList.remove('extend-cell')
       }
 
-      var extendFrom = $(extend.row || this_.$container)
+      extend =
+        e.ctrlKey || e.metaKey ? getWidgetRelatedPosition(e.pageX, e.pageY) : getRelatedPosition(e.pageX, e.pageY)
 
-      highlightEl_.html(getHelperHTML(extend)).css({
-        height: extendFrom.height(),
-        width: extendFrom.width(),
-        left: extendFrom.offset().left,
-        top: extendFrom.offset().top,
-      })
+      const { height, width, left, top } = (extend.row?.[0] || this.$container[0]).getBoundingClientRect()
+
+      $highlightEl.html(getHelperHTML(extend)).css({ height, width, left, top })
     }
-
-    const getCell = (x, y) => this.getElementByPos(x, y, this.cClassSelector)
-
-    /**
-     * @param x
-     * @param y
-     *
-     * @return {Object} Object with specify cursor position related to editable area
-     *                  * row: - Selected row
-     *                  * element: - Active element, what response for widget manipulation;
-     *                  * direction: - There are two directions "left" and "top", and if combined it with other two
-     *                                 params we can get clear cursor position.
-     *
-     */
-    const getRelatedPosition = (x, y) => {
-      const horizontalHighlightAreaSize = 25 // 25%
-      const row = this.getElementByPos(x, y, this.rClassSelector)
-
-      if (!row) return { row, direction: 'top', element: null }
-
-      const { top, height } = row[0].getBoundingClientRect()
-      const relativeY = ((y - top) * 100) / height
-
-      if (relativeY < horizontalHighlightAreaSize || relativeY > 100 - horizontalHighlightAreaSize)
-        return { row, direction: 'top', element: relativeY > 100 - horizontalHighlightAreaSize ? null : row }
-
-      let cells = Array.from<HTMLElement>(row[0].querySelectorAll(this_.cClassSelector))
-      let separators = cells.length
-        ? [
-            cells[0].getBoundingClientRect().left,
-            ...cells.flatMap((cell) => {
-              const { left, width } = cell.getBoundingClientRect()
-              return [
-                left + (width * horizontalHighlightAreaSize) / 100,
-                left + (width * (100 - horizontalHighlightAreaSize)) / 100,
-              ]
-            }),
-            cells[cells.length - 1].getBoundingClientRect().right,
-          ]
-        : []
-
-      for (let i = 0; i < separators.length; i += 2) {
-        if (separators[i] < x && x < separators[i + 1]) return { row, direction: 'left', element: cells[i / 2] || null }
-
-        if (separators[i + 1] < x && x < separators[i + 2])
-          return { row, direction: 'center', element: cells[i / 2] || null }
-      }
-
-      return { row, direction: 'top', element: null }
-    }
-
-    const getWidgetRelatedPosition = (x, y) => {
-      let cell = getCell(x, y) //check only vertical position
-      if (!cell) return { element: null, row: null, cell: null, direction: null }
-
-      let widgets = Array.from<HTMLElement>(cell[0].querySelectorAll(this_.wClassSelector))
-      let horizontalSeparators = widgets.length
-        ? [
-            widgets[0].getBoundingClientRect().top,
-            ...widgets.flatMap((widget) => {
-              const { top, height } = widget.getBoundingClientRect()
-              return [top + (height * 25) / 100, top + (height * (100 - 25)) / 100]
-            }),
-            widgets[widgets.length - 1].getBoundingClientRect().bottom,
-          ]
-        : []
-
-      for (let i = 0; i < horizontalSeparators.length; i += 2) {
-        if (horizontalSeparators[i] < y && y < horizontalSeparators[i + 1])
-          return { element: widgets[i / 2], row: cell.parent(), cell: cell, direction: 'top' }
-      }
-
-      return { element: null, row: cell.parent(), cell: cell, direction: null }
-    }
-
     const getHelperHTML = (extendObj) => {
       const { direction, element, row } = extendObj
       let helper = $("<div class='helper'></div>")
@@ -173,7 +90,7 @@ class GridSystem extends EventMachine {
         }
 
         if (extendObj.cell) {
-          el$ = $(extendObj.cell).find(this_.wClassSelector).last()
+          el$ = $(extendObj.cell).find(this.wClassSelector).last()
 
           return helper.css({
             width: el$.width() || '100%',
@@ -186,7 +103,7 @@ class GridSystem extends EventMachine {
           return helper.css({ width: '100%', bottom: 0 })
         }
 
-        let row = this_.$container.find('.row').last()
+        let row = this.$container.find('.row').last()
 
         return helper.css({ width: '100%', top: row[0] ? row.offset().top + row.height() : 0 })
       }
@@ -194,25 +111,93 @@ class GridSystem extends EventMachine {
       return helper
     }
 
+    /**
+     * @return Object with specify cursor position related to editable area
+     *                  * row: - Selected row
+     *                  * element: - Active element, what response for widget manipulation;
+     *                  * direction: - There are two directions "left" and "top", and if combined it with other two
+     *                                 params we can get clear cursor position.
+     */
+    const getRelatedPosition = (x, y) => {
+      const horizontalHighlightAreaSize = 25 // 25%
+      const row = this.getElementByPos(x, y, this.rClassSelector)
+
+      if (!row) return { row, direction: 'top', element: null }
+
+      const { top, height } = row[0].getBoundingClientRect()
+      const relativeY = ((y - top) * 100) / height
+
+      if (relativeY < horizontalHighlightAreaSize || relativeY > 100 - horizontalHighlightAreaSize)
+        return { row, direction: 'top', element: relativeY > 100 - horizontalHighlightAreaSize ? null : row }
+
+      let cells = Array.from<HTMLElement>(row[0].querySelectorAll(this.cClassSelector))
+      let separators = cells.length
+        ? [
+            cells[0].getBoundingClientRect().left,
+            ...cells.flatMap((cell) => {
+              const { left, width } = cell.getBoundingClientRect()
+              return [
+                left + (width * horizontalHighlightAreaSize) / 100,
+                left + (width * (100 - horizontalHighlightAreaSize)) / 100,
+              ]
+            }),
+            cells[cells.length - 1].getBoundingClientRect().right,
+          ]
+        : []
+
+      for (let i = 0; i < separators.length; i += 2) {
+        if (separators[i] < x && x < separators[i + 1]) return { row, direction: 'left', element: cells[i / 2] || null }
+
+        if (separators[i + 1] < x && x < separators[i + 2])
+          return { row, direction: 'center', element: cells[i / 2] || null }
+      }
+
+      return { row, direction: 'top', element: null }
+    }
+
+    const getWidgetRelatedPosition = (x, y) => {
+      let cell = this.getElementByPos(x, y, this.cClassSelector)
+      if (!cell) return { element: null, row: null, cell: null, direction: null }
+
+      let widgets = Array.from<HTMLElement>(cell[0].querySelectorAll(this.wClassSelector))
+      let horizontalSeparators = widgets.length
+        ? [
+            widgets[0].getBoundingClientRect().top,
+            ...widgets.flatMap((widget) => {
+              const { top, height } = widget.getBoundingClientRect()
+              return [top + (height * 25) / 100, top + (height * (100 - 25)) / 100]
+            }),
+            widgets[widgets.length - 1].getBoundingClientRect().bottom,
+          ]
+        : []
+
+      for (let i = 0; i < horizontalSeparators.length; i += 2) {
+        if (horizontalSeparators[i] < y && y < horizontalSeparators[i + 1])
+          return { element: widgets[i / 2], row: cell.parent(), cell: cell, direction: 'top' }
+      }
+
+      return { element: null, row: cell.parent(), cell: cell, direction: null }
+    }
+
     const getLayoutArray = (row: HTMLElement) =>
       Array.from(row.querySelectorAll(this.cClassSelector)).map((el) => Number(el.className.match(/\d+/)[0]))
 
     const setLayout = (row, layout) =>
       zipWith(
-        (cell, size) => (cell.className = cell.className.replace(SELECT_GRID, ` grid_${size}`)),
-        Array.from(row.querySelectorAll(this_.cClassSelector)),
+        (cell, size) => (cell.className = cell.className.replace(/\s*grid_(\d{1,2})\s*/, ` grid_${size}`)),
+        Array.from(row.querySelectorAll(this.cClassSelector)),
         layout,
       )
 
     const getExtendedCell = (extend) => {
-      var cell = $('<div></div>').addClass(this_.cCl),
-        row = $("<div class='row container_12'></div>"),
-        cells,
-        cellWidth,
-        layout
+      let cell = $('<div></div>').addClass(this.cCl)
+      let row = $("<div class='row container_12'></div>")
+      let cells
+      let cellWidth
+      let layout
 
       if (extend.direction === 'left') {
-        cells = extend.row.find(this_.cClassSelector)
+        cells = extend.row.find(this.cClassSelector)
         cellWidth = Math.ceil(12 / (cells.length + 1))
 
         layout = getLayoutArray(extend.row[0])
@@ -238,7 +223,7 @@ class GridSystem extends EventMachine {
           } else if (extend.row) {
             row.insertAfter(extend.row) // Insert after row
           } else {
-            row.appendTo(this_.container) // If still no any row elements
+            row.appendTo(this.container) // If still no any row elements
           }
         }
       }
@@ -250,22 +235,22 @@ class GridSystem extends EventMachine {
         widget = ui.draggable.data('widget')
 
       if (widgetRootConfig) {
-        this_.addWidget(widgetRootConfig, getExtendedCell(extend))
+        this.addWidget(widgetRootConfig, getExtendedCell(extend))
       } else if (widget && extend.direction === 'center') {
         //replace
         alert('Replace still not implemented')
       } else if (widget && extend.direction !== 'center') {
         //relocate
-        this_.relocateWidget(widget, getExtendedCell(extend))
+        this.relocateWidget(widget, getExtendedCell(extend))
       }
 
       event.stopPropagation()
-      this_.$container.unbind('mousemove', highlightObj)
-      highlightEl_.css({ display: 'none' })
+      this.$container.unbind('mousemove', highlightObj)
+      $highlightEl.css({ display: 'none' })
     }
 
-    resizeLeft = $("<div class='resize-left'></div>")
-    resizeRight = $("<div class='resize-right'></div>")
+    $resizeLeft = $("<div class='resize-left'></div>")
+    $resizeRight = $("<div class='resize-right'></div>")
 
     let resizableColumnIndex
     let resizableLayout
@@ -314,43 +299,42 @@ class GridSystem extends EventMachine {
 
     attachEventListener(document, 'custom:drop', () => this.container.classList.remove('resize'))
 
-    attachEventListener(resizeLeft[0], 'custom:dragstart', handleResizeStart('left'))
-    attachEventListener(resizeRight[0], 'custom:dragstart', handleResizeStart('right'))
+    attachEventListener($resizeLeft[0], 'custom:dragstart', handleResizeStart('left'))
+    attachEventListener($resizeRight[0], 'custom:dragstart', handleResizeStart('right'))
 
-    attachEventListener(resizeLeft[0], 'custom:drag', resize)
-    attachEventListener(resizeRight[0], 'custom:drag', resize)
+    attachEventListener($resizeLeft[0], 'custom:drag', resize)
+    attachEventListener($resizeRight[0], 'custom:drag', resize)
 
-    this.setResizable =  (wCell) => {
+    this.setResizable = (wCell) => {
       this.$resizableCell = wCell
 
-      let cellWidth = wCell.parent().find(this_.cClassSelector).length
+      let cellWidth = wCell.parent().find(this.cClassSelector).length
       if (wCell.index() !== 0) {
-        this.$resizableCell.append(resizeLeft)
+        this.$resizableCell.append($resizeLeft)
       }
       if (wCell.index() !== cellWidth - 1) {
-        this.$resizableCell.append(resizeRight)
+        this.$resizableCell.append($resizeRight)
       }
     }
 
     this.unSetResizable = function (wCell) {
-      $(document.body).append(resizeLeft, resizeRight)
+      $(document.body).append($resizeLeft, $resizeRight)
       this.$resizableCell = null
     }
 
-
     this.relocateWidget = function (widget, newCell) {
-      let oldCell = this_.getWidgetCell(widget)
+      let oldCell = this.getWidgetCell(widget)
       let layout
       let oldRow = this.getWidgetCell(widget).parent()
 
       widgetContainer.unSelectWidget(widget)
 
-      newCell.append(this_.getWidgetHolder(widget))
+      newCell.append(this.getWidgetHolder(widget))
 
-      if (!oldCell.find(this_.wClassSelector)[0]) {
+      if (!oldCell.find(this.wClassSelector)[0]) {
         oldCell.remove()
       } // Cell is empty;
-      if (!oldRow.find(this_.cClassSelector)[0]) {
+      if (!oldRow.find(this.cClassSelector)[0]) {
         // Row is empty;
         oldRow.remove()
       } else {
@@ -360,7 +344,6 @@ class GridSystem extends EventMachine {
       }
 
       widgetContainer.selectWidget(widget)
-      this_.trigger('layoutChange')
     }
 
     this.removeWidget = (widget) => {
@@ -379,13 +362,11 @@ class GridSystem extends EventMachine {
       } else {
         row.remove()
       }
-
-      this.trigger('layoutChange')
     }
 
     this.addWidget = (widgetRootConfig, cell) => {
       let newWidget = new Widget(widgetRootConfig)
-      let widgetHolder = $('<div></div>').addClass(this_.wCl).attr('widgetID', newWidget.id)
+      let widgetHolder = $('<div></div>').addClass(this.wCl).attr('widgetID', newWidget.id)
 
       if (extend.cell && extend.element) {
         widgetHolder.insertBefore(extend.element)
@@ -395,25 +376,23 @@ class GridSystem extends EventMachine {
 
       widgetContainer.addWidget(newWidget)
       widgetContainer.selectWidget(newWidget)
-
-      this_.trigger('layoutChange')
     }
 
-    highlightEl_ = $("<div class='extend-element container_12'></div>")
+    $highlightEl = $("<div class='extend-element container_12'></div>")
       .appendTo(document.body)
       .bind('mousemove', highlightObj)
       .droppable({ drop: dropElement_ })
 
     // Init main containers
     this.container = document.querySelector('#mainCanvas')
-    this_.$container = $(this.container) //TODO: Remove hardcode {Mykhailo}
-    this_.$container
+    this.$container = $(this.container) //TODO: Remove hardcode {Mykhailo}
+    this.$container
       .droppable({
         over: () => {
-          highlightEl_.css({ display: 'block' })
-          this_.$container.bind('mousemove', highlightObj)
+          $highlightEl.css({ display: 'block' })
+          this.$container.bind('mousemove', highlightObj)
         },
-        out: () => highlightEl_.css({ display: 'none' }),
+        out: () => $highlightEl.css({ display: 'none' }),
         drop: dropElement_ /*drop_,*/,
         activeClass: 'hovered',
         deactivate: function (event, ui) {
@@ -421,30 +400,17 @@ class GridSystem extends EventMachine {
           $(this).undelegate(this_.cClassSelector, 'mouseleave')
         },
       })
-      .delegate(this_.wClassSelector, 'mousedown', function () {
+      .delegate(this.wClassSelector, 'mousedown', function () {
         widgetContainer.selectWidget($(this).data('widget'))
       })
-      .delegate(this_.wClassSelector, 'dblclick', function () {
-        widgetContainer.editWidget($(this).data('widget'))
-      })
 
-    widgetContainer.bind('selectWidget', (widget) => {
-      var widgetCell = this_.getWidgetCell(widget)
-      this_.setResizable(widgetCell)
-    })
-
-    widgetContainer.bind('unSelectWidget', (widget) => {
-      var widgetCell = this_.getWidgetCell(widget)
-      this_.unSetResizable(widgetCell)
-    })
+    widgetContainer.bind('selectWidget', (widget) => this.setResizable(this.getWidgetCell(widget)))
+    widgetContainer.bind('unSelectWidget', (widget) => this.unSetResizable(this.getWidgetCell(widget)))
 
     document.addEventListener('keydown', (event) => {
-      if ((event.key === 'Backspace' || event.key === 'Delete') && widgetContainer.activeWidget.mode !== 'edit') {
+      if (event.key === 'Backspace' || event.key === 'Delete') {
         widgetContainer.removeWidget(widgetContainer.activeWidget)
         event.preventDefault()
-      }
-      if (event.key === 'Enter' && widgetContainer.activeWidget.mode !== 'edit') {
-        widgetContainer.editWidget(widgetContainer.activeWidget)
       }
     })
   }
