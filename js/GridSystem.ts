@@ -18,7 +18,7 @@ class GridSystem extends EventMachine {
   wMinWidth = 2 //Number of column
   $container
 
-  getElementByPos(x, y, selector) {
+  getElementByPos(x: number, y: number, selector: string) {
     const element = Array.from(this.$container[0].querySelectorAll(selector)).find((el) => {
       const { top, bottom, left, right } = el.getBoundingClientRect()
 
@@ -32,16 +32,6 @@ class GridSystem extends EventMachine {
 
   getWidgetHolder = ({ id }) => $(`[widgetid='${id}']`)
   getWidgetCell = (widget) => this.getWidgetHolder(widget).parent()
-
-  getLayout = () =>
-    this.$container
-      .clone()
-      .find(this.wClassSelector)
-      .each(function () {
-        $(this).removeClass('active').html('')
-      })
-      .end()
-      .html()
 
   constructor() {
     super()
@@ -74,7 +64,6 @@ class GridSystem extends EventMachine {
       })
     }
 
-    const getWidget = (x, y) => this.getElementByPos(x, y, this.wClassSelector)
     const getCell = (x, y) => this.getElementByPos(x, y, this.cClassSelector)
 
     /**
@@ -126,46 +115,27 @@ class GridSystem extends EventMachine {
     }
 
     const getWidgetRelatedPosition = (x, y) => {
-      //check only vertical position
-      var cell = getCell(x, y),
-        widgets = cell.find(this_.wClassSelector),
-        widget,
-        j,
-        i,
-        direction,
-        horizontalSeparators = []
+      let cell = getCell(x, y) //check only vertical position
+      if (!cell) return { element: null, row: null, cell: null, direction: null }
 
-      if (!cell) {
-        return { element: null, row: null, cell: null, direction: null }
+      let widgets = Array.from<HTMLElement>(cell[0].querySelectorAll(this_.wClassSelector))
+      let horizontalSeparators = widgets.length
+        ? [
+            widgets[0].getBoundingClientRect().top,
+            ...widgets.flatMap((widget) => {
+              const { top, height } = widget.getBoundingClientRect()
+              return [top + (height * 25) / 100, top + (height * (100 - 25)) / 100]
+            }),
+            widgets[widgets.length - 1].getBoundingClientRect().bottom,
+          ]
+        : []
+
+      for (let i = 0; i < horizontalSeparators.length; i += 2) {
+        if (horizontalSeparators[i] < y && y < horizontalSeparators[i + 1])
+          return { element: widgets[i / 2], row: cell.parent(), cell: cell, direction: 'top' }
       }
 
-      if (widgets.length) {
-        widget = $(widgets[0])
-
-        horizontalSeparators.push(cell.offset().top)
-        for (j = 0; j < widgets.length; j += 1) {
-          widget = $(widgets[j])
-          horizontalSeparators.push(widget.offset().top + (widget.height() * 25) / 100)
-          horizontalSeparators.push(widget.offset().top + (widget.height() * (100 - 25)) / 100)
-        }
-        horizontalSeparators.push(widget.offset().top + widget.height())
-      }
-
-      widget = null
-      direction = null
-      for (i = 0; i < horizontalSeparators.length; i += 2) {
-        if (horizontalSeparators[i] < y && y < horizontalSeparators[i + 1]) {
-          direction = 'top'
-          widget = widgets[i / 2]
-          break
-        }
-      }
-      return {
-        element: widget,
-        row: cell.parent(),
-        cell: cell,
-        direction: direction,
-      }
+      return { element: null, row: cell.parent(), cell: cell, direction: null }
     }
 
     const getHelperHTML = (extendObj) => {
@@ -303,7 +273,6 @@ class GridSystem extends EventMachine {
 
     //Resize functions;
     const resize = (startEvent, side) => {
-      let layoutBefore = this.getLayout()
       let prevWidth = 0
       let startColumn
 
@@ -341,10 +310,6 @@ class GridSystem extends EventMachine {
         $(document.body).unbind('mousemove', resizeAction)
         $(document.body).unbind('mouseup', stopResizeAction)
         this.$container.removeClass('resize')
-
-        if (this.getLayout() !== layoutBefore) {
-          this.trigger('layoutChange')
-        }
       }
 
       SELECT_GRID.test(this.resizableCell[0].className)
