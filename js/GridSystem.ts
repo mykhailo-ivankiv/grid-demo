@@ -1,7 +1,9 @@
 import EventMachine from './EventMachine'
 import WidgetContainer from './WidgetContainer'
 import Widget from './Widget'
-import { normalizeArray } from './utils/helpers'
+import { decreaseArrayByValueFromLeft, decreaseArrayByValueFromRight, normalizeArray } from './utils/helpers'
+import { attachEventListener } from './utils/customEvents'
+import { splitAt, concat, sum, zipWith, pipe, slice, update, last, head } from 'ramda'
 
 const widgetContainer = new WidgetContainer()
 
@@ -17,9 +19,11 @@ class GridSystem extends EventMachine {
 
   wMinWidth = 2 //Number of column
   $container
+  container: HTMLElement
+  $resizableCell: HTMLElement | null = null
 
   getElementByPos(x: number, y: number, selector: string) {
-    const element = Array.from(this.$container[0].querySelectorAll(selector)).find((el) => {
+    const element = Array.from(this.container.querySelectorAll(selector)).find((el) => {
       const { top, bottom, left, right } = el.getBoundingClientRect()
 
       if (y > top && y <= bottom && x > left && x <= right) {
@@ -190,26 +194,15 @@ class GridSystem extends EventMachine {
       return helper
     }
 
-    const getLayoutArray = (row, from, to) => {
-      var layout = [],
-        i,
-        cells = row.find(this.cClassSelector)
+    const getLayoutArray = (row: HTMLElement) =>
+      Array.from(row.querySelectorAll(this.cClassSelector)).map((el) => Number(el.className.match(/\d+/)[0]))
 
-      for (i = from || 0; i < (to || cells.length); i += 1) {
-        cells[i].className.replace(SELECT_GRID, function () {
-          layout.push(parseInt(arguments[1]))
-        })
-      }
-      return layout
-    }
-
-    const setLayout = (row, layout, from) => {
-      var cells = row.find(this_.cClassSelector),
-        i
-      for (i = 0; i < layout.length; i += 1) {
-        cells[i + (from || 0)].className = cells[i].className.replace(SELECT_GRID, ' grid_' + layout[i] + ' ')
-      }
-    }
+    const setLayout = (row, layout) =>
+      zipWith(
+        (cell, size) => (cell.className = cell.className.replace(SELECT_GRID, ` grid_${size}`)),
+        Array.from(row.querySelectorAll(this_.cClassSelector)),
+        layout,
+      )
 
     const getExtendedCell = (extend) => {
       var cell = $('<div></div>').addClass(this_.cCl),
@@ -222,9 +215,9 @@ class GridSystem extends EventMachine {
         cells = extend.row.find(this_.cClassSelector)
         cellWidth = Math.ceil(12 / (cells.length + 1))
 
-        layout = getLayoutArray(extend.row)
+        layout = getLayoutArray(extend.row[0])
         layout.normalize(12 - cellWidth)
-        setLayout(extend.row, layout)
+        setLayout(extend.row[0], layout)
 
         cell.addClass('grid_' + cellWidth)
 
@@ -245,7 +238,7 @@ class GridSystem extends EventMachine {
           } else if (extend.row) {
             row.insertAfter(extend.row) // Insert after row
           } else {
-            row.appendTo(this_.$container) // If still no any row elements
+            row.appendTo(this_.container) // If still no any row elements
           }
         }
       }
@@ -271,76 +264,79 @@ class GridSystem extends EventMachine {
       highlightEl_.css({ display: 'none' })
     }
 
-    //Resize functions;
-    const resize = (startEvent, side) => {
-      let prevWidth = 0
-      let startColumn
+    resizeLeft = $("<div class='resize-left'></div>")
+    resizeRight = $("<div class='resize-right'></div>")
 
-      const resizeAction = (currentEvent) => {
-        let deltaColumn =
-          side === 'left'
-            ? Math.round((currentEvent.clientX - startEvent.clientX) / COLUMN_WIDTH)
-            : -Math.round((currentEvent.clientX - startEvent.clientX) / COLUMN_WIDTH)
+    let resizableColumnIndex
+    let resizableLayout
 
-        if (prevWidth === Math.abs(deltaColumn)) return
+    const resize = ({ movementX }) => {
+      let deltaColumn = Math.round(movementX / COLUMN_WIDTH)
+      if (deltaColumn === 0) return setLayout(this.$resizableCell[0].parentNode, resizableLayout)
 
-        let from = side === 'left' ? 0 : this.resizableCell.index() + 1
-        let to =
-          side === 'left' ? this.resizableCell.index() : this.resizableCell.parent().find(this.cClassSelector).length
+      const [left, right] = splitAt(resizableColumnIndex, resizableLayout)
+      // | a | b <-| c|
+      if (deltaColumn < 0) {
+        const nextLeftSize = sum(left) + deltaColumn
+        if (nextLeftSize < left.length * this.wMinWidth) return
 
-        let currentCellWidth = startColumn - deltaColumn
-        if (currentCellWidth >= this.wMinWidth) {
-          let layout
-
-          layout = getLayoutArray(this.resizableCell.parent(), from, to)
-          layout = normalizeArray(layout, layout.sum() - (prevWidth - deltaColumn), this.wMinWidth)
-
-          if (layout) {
-            this.resizableCell[0].className = this.resizableCell[0].className.replace(
-              SELECT_GRID,
-              ' grid_' + currentCellWidth + ' ',
-            )
-            setLayout(this.resizableCell.parent(), layout, from)
-            prevWidth = deltaColumn
-          }
-        }
+        return setLayout(
+          this.$resizableCell[0].parentNode,
+          concat(
+            decreaseArrayByValueFromRight(left, this.wMinWidth, Math.abs(deltaColumn)),
+            update(0, head(right) - deltaColumn, right),
+          ),
+        )
       }
 
-      const stopResizeAction = () => {
-        $(document.body).unbind('mousemove', resizeAction)
-        $(document.body).unbind('mouseup', stopResizeAction)
-        this.$container.removeClass('resize')
-      }
+      // | a |-> b | c|
+      const nextRightSize = sum(right) - deltaColumn
+      if (nextRightSize < right.length * this.wMinWidth) return
 
-      SELECT_GRID.test(this.resizableCell[0].className)
-      startColumn = RegExp.$1
-
-      $(document.body).bind('mousemove', resizeAction)
-      $(document.body).bind('mouseup', stopResizeAction)
-      this.$container.addClass('resize')
+      setLayout(
+        this.$resizableCell[0].parentNode,
+        concat(
+          update(left.length - 1, last(left) + deltaColumn, left),
+          decreaseArrayByValueFromLeft(right, this.wMinWidth, Math.abs(deltaColumn)),
+        ),
+      )
     }
 
-    this.resizableCell = null
+    const handleResizeStart = (direction: 'left' | 'right') => () => {
+      const directionIndexCorrector = direction === 'right' ? 1 : 0
+      this.container.classList.add('resize')
+      const resizableCell = this.$resizableCell[0]
+      const cells = Array.from(resizableCell.parentNode.querySelectorAll(this.cClassSelector))
 
-    resizeLeft = $("<div class='resize-left'></div>").bind('mousedown', (e) => resize(e, 'left'))
-    resizeRight = $("<div class='resize-right'></div>").bind('mousedown', (e) => resize(e, 'right'))
+      resizableColumnIndex = cells.findIndex((el) => el === resizableCell) + directionIndexCorrector
+      resizableLayout = getLayoutArray(this.$resizableCell[0].parentNode)
+    }
 
-    this.setResizable = function (wCell) {
-      this.resizableCell = wCell
+    attachEventListener(document, 'custom:drop', () => this.container.classList.remove('resize'))
+
+    attachEventListener(resizeLeft[0], 'custom:dragstart', handleResizeStart('left'))
+    attachEventListener(resizeRight[0], 'custom:dragstart', handleResizeStart('right'))
+
+    attachEventListener(resizeLeft[0], 'custom:drag', resize)
+    attachEventListener(resizeRight[0], 'custom:drag', resize)
+
+    this.setResizable =  (wCell) => {
+      this.$resizableCell = wCell
 
       let cellWidth = wCell.parent().find(this_.cClassSelector).length
       if (wCell.index() !== 0) {
-        this.resizableCell.append(resizeLeft)
+        this.$resizableCell.append(resizeLeft)
       }
       if (wCell.index() !== cellWidth - 1) {
-        this.resizableCell.append(resizeRight)
+        this.$resizableCell.append(resizeRight)
       }
     }
 
     this.unSetResizable = function (wCell) {
       $(document.body).append(resizeLeft, resizeRight)
-      this.resizableCell = null
+      this.$resizableCell = null
     }
+
 
     this.relocateWidget = function (widget, newCell) {
       let oldCell = this_.getWidgetCell(widget)
@@ -360,7 +356,7 @@ class GridSystem extends EventMachine {
       } else {
         layout = getLayoutArray(oldRow)
         layout.normalize(12)
-        setLayout(oldRow, layout)
+        setLayout(oldRow[0], layout)
       }
 
       widgetContainer.selectWidget(widget)
@@ -379,7 +375,7 @@ class GridSystem extends EventMachine {
       }
 
       if (row[0].childNodes.length) {
-        setLayout(row, getLayoutArray(row).normalize(12))
+        setLayout(row[0], getLayoutArray(row).normalize(12))
       } else {
         row.remove()
       }
@@ -403,56 +399,54 @@ class GridSystem extends EventMachine {
       this_.trigger('layoutChange')
     }
 
-    function init_() {
-      highlightEl_ = $("<div class='extend-element container_12'></div>")
-        .appendTo(document.body)
-        .bind('mousemove', highlightObj)
-        .droppable({ drop: dropElement_ })
+    highlightEl_ = $("<div class='extend-element container_12'></div>")
+      .appendTo(document.body)
+      .bind('mousemove', highlightObj)
+      .droppable({ drop: dropElement_ })
 
-      // Init main containers
-      this_.$container = $('#mainCanvas') //TODO: Remove hardcode {Mykhailo}
-      this_.$container
-        .droppable({
-          over: () => {
-            highlightEl_.css({ display: 'block' })
-            this_.$container.bind('mousemove', highlightObj)
-          },
-          out: () => highlightEl_.css({ display: 'none' }),
-          drop: dropElement_ /*drop_,*/,
-          activeClass: 'hovered',
-          deactivate: function (event, ui) {
-            $(this).undelegate(this_.cClassSelector, 'mouseenter')
-            $(this).undelegate(this_.cClassSelector, 'mouseleave')
-          },
-        })
-        .delegate(this_.wClassSelector, 'mousedown', function () {
-          widgetContainer.selectWidget($(this).data('widget'))
-        })
-        .delegate(this_.wClassSelector, 'dblclick', function () {
-          widgetContainer.editWidget($(this).data('widget'))
-        })
-
-      widgetContainer.bind('selectWidget', (widget) => {
-        var widgetCell = this_.getWidgetCell(widget)
-        this_.setResizable(widgetCell)
+    // Init main containers
+    this.container = document.querySelector('#mainCanvas')
+    this_.$container = $(this.container) //TODO: Remove hardcode {Mykhailo}
+    this_.$container
+      .droppable({
+        over: () => {
+          highlightEl_.css({ display: 'block' })
+          this_.$container.bind('mousemove', highlightObj)
+        },
+        out: () => highlightEl_.css({ display: 'none' }),
+        drop: dropElement_ /*drop_,*/,
+        activeClass: 'hovered',
+        deactivate: function (event, ui) {
+          $(this).undelegate(this_.cClassSelector, 'mouseenter')
+          $(this).undelegate(this_.cClassSelector, 'mouseleave')
+        },
+      })
+      .delegate(this_.wClassSelector, 'mousedown', function () {
+        widgetContainer.selectWidget($(this).data('widget'))
+      })
+      .delegate(this_.wClassSelector, 'dblclick', function () {
+        widgetContainer.editWidget($(this).data('widget'))
       })
 
-      widgetContainer.bind('unSelectWidget', (widget) => {
-        var widgetCell = this_.getWidgetCell(widget)
-        this_.unSetResizable(widgetCell)
-      })
+    widgetContainer.bind('selectWidget', (widget) => {
+      var widgetCell = this_.getWidgetCell(widget)
+      this_.setResizable(widgetCell)
+    })
 
-      document.addEventListener('keydown', (event) => {
-        if ((event.key === 'Backspace' || event.key === 'Delete') && widgetContainer.activeWidget.mode !== 'edit') {
-          widgetContainer.removeWidget(widgetContainer.activeWidget)
-          event.preventDefault()
-        }
-        if (event.key === 'Enter' && widgetContainer.activeWidget.mode !== 'edit') {
-          widgetContainer.editWidget(widgetContainer.activeWidget)
-        }
-      })
-    }
-    init_()
+    widgetContainer.bind('unSelectWidget', (widget) => {
+      var widgetCell = this_.getWidgetCell(widget)
+      this_.unSetResizable(widgetCell)
+    })
+
+    document.addEventListener('keydown', (event) => {
+      if ((event.key === 'Backspace' || event.key === 'Delete') && widgetContainer.activeWidget.mode !== 'edit') {
+        widgetContainer.removeWidget(widgetContainer.activeWidget)
+        event.preventDefault()
+      }
+      if (event.key === 'Enter' && widgetContainer.activeWidget.mode !== 'edit') {
+        widgetContainer.editWidget(widgetContainer.activeWidget)
+      }
+    })
   }
 }
 

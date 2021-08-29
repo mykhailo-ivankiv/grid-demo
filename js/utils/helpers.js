@@ -63,7 +63,7 @@ export const normalizeArray = (array, sumValue, minValue) => {
   //TODO: Fix duplicate Array.prototype.normalize
   var diff = array.sum() - sumValue,
     i = 0,
-    resultArray = clone(array)
+    resultArray = [...array]
 
   minValue = minValue || 1
 
@@ -95,3 +95,66 @@ export const normalizeArray = (array, sumValue, minValue) => {
   }
   return resultArray
 }
+
+// New helpers
+export const distributeChangeInArray = (array, value) => {
+  if (value === 0) return array
+
+  if (value > 0) {
+    const edgeIndex = Math.abs(value % array.length)
+    const diff = (value - edgeIndex) / array.length
+
+    return array.map((n, index) => n + (index < edgeIndex ? diff + 1 : diff))
+  }
+
+  if (value < 0) {
+    const edgeIndex = Math.abs(value % array.length)
+    const diff = (value + edgeIndex) / array.length
+
+    return array.map((n, index) => n + (index < edgeIndex ? diff - 1 : diff))
+  }
+}
+
+export const decreaseArrayByValueFromRight = (array, minValue, valueChange) =>
+  array.reduceRight(
+    ([valueChange, result], n) => {
+      if (valueChange === 0) {
+        return [valueChange, [n, ...result]]
+      }
+
+      if (n <= minValue) {
+        return [valueChange, [n, ...result]]
+      }
+
+      if (n - valueChange >= minValue) {
+        return [0, [n - valueChange, ...result]]
+      }
+
+      const diff = n - minValue
+
+      return [valueChange - diff, [n - diff, ...result]]
+    },
+    [valueChange, []],
+  )[1]
+
+export const decreaseArrayByValueFromLeft = (array, minValue, valueChange) =>
+  array.reduce(
+    ([valueChange, result], n) => {
+      if (valueChange === 0) {
+        return [valueChange, [...result, n]]
+      }
+
+      if (n <= minValue) {
+        return [valueChange, [...result, n]]
+      }
+
+      if (n - valueChange >= minValue) {
+        return [0, [...result, n - valueChange]]
+      }
+
+      const diff = n - minValue
+
+      return [valueChange - diff, [...result, n - diff]]
+    },
+    [valueChange, []],
+  )[1]

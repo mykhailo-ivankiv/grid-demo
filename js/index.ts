@@ -2,6 +2,8 @@ import WidgetContainer from './WidgetContainer'
 import GridSystem from './GridSystem'
 import ToolBox from './ToolBox'
 
+import './utils/customEvents'
+
 const widgetContainer = new WidgetContainer()
 const gridSystem = new GridSystem()
 
