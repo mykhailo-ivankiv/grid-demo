@@ -19,28 +19,15 @@ class GridSystem extends EventMachine {
   $container
 
   getElementByPos(x, y, selector) {
-    var elements = this.$container.find(selector),
-      element,
-      elementOffset,
-      i
+    const element = Array.from(this.$container[0].querySelectorAll(selector)).find((el) => {
+      const { top, bottom, left, right } = el.getBoundingClientRect()
 
-    for (i = 0; i < elements.length; i += 1) {
-      element = $(elements[i])
-      elementOffset = element.offset()
-      elementOffset.width = element.width()
-      elementOffset.height = element.height()
-
-      // Check the element
-      if (
-        y > elementOffset.top &&
-        y <= elementOffset.top + elementOffset.height &&
-        x > elementOffset.left &&
-        x <= elementOffset.left + elementOffset.width
-      ) {
-        return element
+      if (y > top && y <= bottom && x > left && x <= right) {
+        return true
       }
-    }
-    return null
+    })
+
+    return element ? $(element) : null
   }
 
   getWidgetHolder = ({ id }) => $(`[widgetid='${id}']`)
@@ -89,29 +76,8 @@ class GridSystem extends EventMachine {
 
     const getWidget = (x, y) => this.getElementByPos(x, y, this.wClassSelector)
     const getCell = (x, y) => this.getElementByPos(x, y, this.cClassSelector)
-    const getRow = (x, y) => this.getElementByPos(x, y, this.rClassSelector)
-
-    const getSeparators = (cells, settings) => {
-      var separators = [],
-        cell,
-        j
-      // check the cells, and add separate zones
-      if (cells.length) {
-        cell = $(cells[0])
-
-        separators.push(cell.offset().left)
-        for (j = 0; j < cells.length; j += 1) {
-          cell = $(cells[j])
-          separators.push(cell.offset().left + (cell.width() * settings.v) / 100)
-          separators.push(cell.offset().left + (cell.width() * (100 - settings.v)) / 100)
-        }
-        separators.push(cell.offset().left + cell.width())
-      }
-      return separators
-    }
 
     /**
-     *
      * @param x
      * @param y
      *
@@ -122,44 +88,41 @@ class GridSystem extends EventMachine {
      *                                 params we can get clear cursor position.
      *
      */
-    const getRelatedPosition = (x, y, settings) => {
-      settings = settings || {
-        cellManipulation: true,
-        h: 25,
-        /* horizontalRegion (%) */ v: 25 /* verticalRegion (%) */,
+    const getRelatedPosition = (x, y) => {
+      const horizontalHighlightAreaSize = 25 // 25%
+      const row = this.getElementByPos(x, y, this.rClassSelector)
+
+      if (!row) return { row, direction: 'top', element: null }
+
+      const { top, height } = row[0].getBoundingClientRect()
+      const relativeY = ((y - top) * 100) / height
+
+      if (relativeY < horizontalHighlightAreaSize || relativeY > 100 - horizontalHighlightAreaSize)
+        return { row, direction: 'top', element: relativeY > 100 - horizontalHighlightAreaSize ? null : row }
+
+      let cells = Array.from<HTMLElement>(row[0].querySelectorAll(this_.cClassSelector))
+      let separators = cells.length
+        ? [
+            cells[0].getBoundingClientRect().left,
+            ...cells.flatMap((cell) => {
+              const { left, width } = cell.getBoundingClientRect()
+              return [
+                left + (width * horizontalHighlightAreaSize) / 100,
+                left + (width * (100 - horizontalHighlightAreaSize)) / 100,
+              ]
+            }),
+            cells[cells.length - 1].getBoundingClientRect().right,
+          ]
+        : []
+
+      for (let i = 0; i < separators.length; i += 2) {
+        if (separators[i] < x && x < separators[i + 1]) return { row, direction: 'left', element: cells[i / 2] || null }
+
+        if (separators[i + 1] < x && x < separators[i + 2])
+          return { row, direction: 'center', element: cells[i / 2] || null }
       }
 
-      var row = getRow(x, y),
-        extendDirection = 'top', // Default - top
-        extendElement = null,
-        cells,
-        separators,
-        relativeY,
-        i
-
-      if (row) {
-        relativeY = ((y - row.offset().top) * 100) / row.height()
-        if (relativeY < settings.h || relativeY > 100 - settings.h) {
-          //top is default direction
-          extendElement = relativeY > 100 - settings.h ? null : row
-        } else {
-          cells = row.find(this_.cClassSelector)
-          separators = getSeparators(cells, settings) //TODO: We can cache this value {Mykhailo}
-
-          for (i = 0; i < separators.length; i += 2) {
-            if (separators[i] < x && x < separators[i + 1]) {
-              extendElement = cells[i / 2] || null
-              extendDirection = 'left'
-              break
-            } else if (separators[i + 1] < x && x < separators[i + 2]) {
-              extendElement = cells[i / 2] || null
-              extendDirection = 'center'
-              break
-            }
-          }
-        }
-      }
-      return { row: row, direction: extendDirection, element: extendElement }
+      return { row, direction: 'top', element: null }
     }
 
     const getWidgetRelatedPosition = (x, y) => {
